@@ -25,11 +25,13 @@ public class UserController {
 
     @PostMapping(value = "/users")
     public User createUser(@RequestBody User user) {
+        log.info("Creating user {}", user);
         return userService.createUser(user);
     }
 
     @PutMapping(value = "/users")
     public User updateUser(@RequestBody User user) {
+        log.info("Updating user {}", user);
         return userService.updateUser(user);
     }
 }
