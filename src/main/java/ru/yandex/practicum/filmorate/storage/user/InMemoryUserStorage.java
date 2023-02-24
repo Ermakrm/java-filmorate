@@ -21,7 +21,7 @@ public class InMemoryUserStorage implements UserStorage {
         return users.values();
     }
 
-    private static Integer getNextId() {
+    private Integer getNextId() {
         return ++generatorUserId;
     }
 
@@ -62,8 +62,9 @@ public class InMemoryUserStorage implements UserStorage {
     @Override
     public User removeUser(User user) {
         if (users.containsKey(user.getId())) {
+            User deletedUser = users.remove(user.getId());
             log.debug("User deleted {}", user);
-            return users.remove(user.getId());
+            return deletedUser;
         } else {
             throw new ValidationException("Ошибка! Такого пользователя не существует");
         }

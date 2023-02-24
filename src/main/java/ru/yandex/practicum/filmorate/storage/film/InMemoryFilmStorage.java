@@ -17,7 +17,7 @@ public class InMemoryFilmStorage implements FilmStorage {
     private final Map<Integer, Film> films = new HashMap<>();
     private static Integer generatorFilmId = 0;
 
-    private static Integer getNextId() {
+    private Integer getNextId() {
         return ++generatorFilmId;
     }
 
@@ -57,8 +57,9 @@ public class InMemoryFilmStorage implements FilmStorage {
     @Override
     public Film removeFilm(Film film) {
         if (films.containsKey(film.getId())) {
+            Film deletetFilm = films.remove(film.getId());
             log.debug("Film deleted {}", film);
-            return films.remove(film.getId());
+            return deletetFilm;
         } else {
             throw new ValidationException("Deletion error! There is no such film");
         }

@@ -1,6 +1,5 @@
 package ru.yandex.practicum.filmorate.service;
 
-
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.model.User;
@@ -38,8 +37,6 @@ public class UserService {
     }
 
     public void addFriend(int id1, int id2) {
-        /* Долго мучался, так и не понял почему так. Если поменять две эти строки местами, то падают 2 теста
-        в постмане на получение друзей пользователя с ID 1) Не знаешь, почему так может быть? */
         getUser(id2).getFriends().add(id1);
         getUser(id1).getFriends().add(id2);
     }
@@ -64,7 +61,6 @@ public class UserService {
     }
 
     public List<User> getCommonFriends(int id1, int id2) {
-        // тут логическое умножение, чтобы проверить, что оба ID существуют
         if (getUser(id1).getFriends().isEmpty() && getUser(id2).getFriends().isEmpty()) {
             return List.of();
         }
