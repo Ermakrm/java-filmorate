@@ -1,67 +1,78 @@
 package ru.yandex.practicum.filmorate.service;
 
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
 
-import javax.validation.ValidationException;
-import java.time.LocalDate;
-import java.util.Collection;
-import java.util.HashMap;
-import java.util.Map;
+import java.util.*;
 
-@Slf4j
 @Service
 public class UserService {
-    private static final Map<Integer, User> users = new HashMap<>();
-    private static Integer generatorUserId = 0;
 
-    private static Integer getNextId() {
-        return ++generatorUserId;
+    InMemoryUserStorage inMemoryUserStorage;
+
+    @Autowired
+    public UserService(InMemoryUserStorage inMemoryUserStorage) {
+        this.inMemoryUserStorage = inMemoryUserStorage;
     }
 
-    public Collection<User> findAll() {
-        return users.values();
+    public User getUser(int id) {
+        if (!inMemoryUserStorage.getUsers().containsKey(id)) {
+            throw new IllegalArgumentException("Wrong ID");
+        }
+        return inMemoryUserStorage.getUsers().get(id);
     }
 
     public User createUser(User user) {
-        validateUser(user);
-        user.setId(getNextId());
-        users.put(user.getId(), user);
-        log.info("Пользователь {} успешно добавлен", user.getName());
-        return user;
+        return inMemoryUserStorage.addUser(user);
     }
 
     public User updateUser(User user) {
-        if (!users.containsKey(user.getId()) || user.getId() == null) {
-            throw new ValidationException("Ошибка обновления! Такого пользователя не существует");
-        }
-        validateUser(user);
-        users.put(user.getId(), user);
-        log.info("Пользователь {} успешно обновлен", user.getName());
-        return user;
+        return inMemoryUserStorage.updateUser(user);
     }
 
+    public Collection<User> getAllUsers() {
+        return inMemoryUserStorage.getUsersList();
+    }
 
-    private void validateUser(User user) {
-        if (user.getEmail() == null || user.getLogin() == null || user.getBirthday() == null) {
-            log.error("Одно или несколько полей - null");
-            throw new ValidationException("Заполнены не все данные");
+    public void addFriend(int id1, int id2) {
+        getUser(id2).getFriends().add(id1);
+        getUser(id1).getFriends().add(id2);
+    }
+
+    public List<User> getFriends(int id) {
+        List<User> friends = new ArrayList<>();
+        if (getUser(id).getFriends().isEmpty()) {
+            return friends;
         }
-        if (!user.getEmail().contains("@")) {
-            log.error("Некорректный email");
-            throw new ValidationException("электронная почта не может быть пустой и должна содержать символ @");
+        for (Integer friendId : getUser(id).getFriends()) {
+            friends.add(getUser(friendId));
         }
-        if (user.getLogin().isBlank() || user.getLogin().contains(" ")) {
-            log.error("Некорректный email");
-            throw new ValidationException("логин не может быть пустым и содержать пробелы");
+        return friends;
+    }
+
+    public void deleteFriend(int id1, int id2) {
+        if (!getUser(id1).getFriends().contains(id2)) {
+            throw new IllegalArgumentException("wrong ID");
         }
-        if (user.getName() == null || user.getName().isBlank()) {
-            user.setName(user.getLogin());
+        getUser(id1).getFriends().remove(id2);
+        getUser(id2).getFriends().remove(id1);
+    }
+
+    public List<User> getCommonFriends(int id1, int id2) {
+        if (getUser(id1).getFriends().isEmpty() && getUser(id2).getFriends().isEmpty()) {
+            return List.of();
         }
-        if (user.getBirthday().isAfter(LocalDate.now())) {
-            log.error("Некорректная дата рождения");
-            throw new ValidationException("дата рождения не может быть в будущем");
+        Set<Integer> commonIds = new HashSet<>(inMemoryUserStorage.getUsers().get(id1).getFriends());
+        commonIds.retainAll(inMemoryUserStorage.getUsers().get(id2).getFriends());
+        if (commonIds.isEmpty()) {
+            return List.of();
         }
+        List<User> commonFriends = new ArrayList<>();
+        for (Integer id : commonIds) {
+            commonFriends.add(inMemoryUserStorage.getUsers().get(id));
+        }
+        return commonFriends;
     }
 }
