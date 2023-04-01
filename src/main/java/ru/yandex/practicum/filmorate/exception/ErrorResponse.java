@@ -7,13 +7,14 @@ import org.springframework.web.bind.annotation.RestControllerAdvice;
 import org.springframework.web.bind.support.WebExchangeBindException;
 
 import java.net.BindException;
+import java.sql.SQLException;
 import java.util.Map;
 
 @RestControllerAdvice
 class ErrorResponse {
-    @ExceptionHandler
+    @ExceptionHandler({IllegalArgumentException.class, SQLException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
-    public Map<String, String> handleWrongArgument(final IllegalArgumentException e) {
+    public Map<String, String> handleWrongArgument(final RuntimeException e) {
         return Map.of("Wrong argument", e.getMessage());
     }
 

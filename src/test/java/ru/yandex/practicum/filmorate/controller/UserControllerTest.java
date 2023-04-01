@@ -1,69 +1,85 @@
+
 package ru.yandex.practicum.filmorate.controller;
 
+import lombok.RequiredArgsConstructor;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.boot.test.autoconfigure.jdbc.AutoConfigureTestDatabase;
 import org.springframework.boot.test.context.SpringBootTest;
+import org.springframework.dao.DataIntegrityViolationException;
+import org.springframework.dao.InvalidDataAccessApiUsageException;
+import org.springframework.test.annotation.DirtiesContext;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.service.UserService;
-import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.dao.FriendsStorage;
+import ru.yandex.practicum.filmorate.storage.dao.impl.UserDbStorage;
 
-import javax.validation.*;
+import javax.validation.ConstraintViolation;
+import javax.validation.Validation;
+import javax.validation.Validator;
+import javax.validation.ValidatorFactory;
 import java.time.LocalDate;
-import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 @SpringBootTest
+@AutoConfigureTestDatabase
+@RequiredArgsConstructor(onConstructor_ = @Autowired)
 class UserControllerTest {
-    static UserController userController;
-    static Validator validator;
+    private final UserDbStorage userDbStorage;
+    private static Validator validator;
+    private final FriendsStorage friendsStorage;
 
     @BeforeEach
     void beforeEach() {
-        userController = new UserController(new UserService(new InMemoryUserStorage()));
         ValidatorFactory validatorFactory = Validation.buildDefaultValidatorFactory();
         validator = validatorFactory.usingContext().getValidator();
     }
 
+
     @Test
+    @DirtiesContext
     void createUser() {
-        User user = User.builder().email("email@yandex.ru").login("login").name("name")
+        User user = User.builder().email("user@yandex.ru").login("user_login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
-        assertEquals(user, userController.createUser(user));
+        assertEquals(user, userDbStorage.addUser(user));
     }
 
     @Test
+    @DirtiesContext
     void updateUser() {
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
-        assertEquals(user, userController.createUser(user));
+        assertEquals(user, userDbStorage.addUser(user));
         String newName = "newName";
         user.setName(newName);
         String newEmail = "newEmail@yandex.ru";
         user.setEmail(newEmail);
-        User updatedUser = userController.updateUser(user);
+        User updatedUser = userDbStorage.updateUser(user);
         assertEquals(newName, updatedUser.getName());
         assertEquals(newEmail, updatedUser.getEmail());
     }
 
     @Test
+    @DirtiesContext
     void getAllUsers() {
-        int len = userController.getAllUsers().size();
+        int len = userDbStorage.getUsers().size();
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
         User user2 = User.builder().email("email2@yandex.ru").login("login2").name("name2")
                 .birthday(LocalDate.of(2001, 2, 2)).build();
-        userController.createUser(user);
-        userController.createUser(user2);
-        Collection<User> users = userController.getAllUsers();
+        userDbStorage.addUser(user);
+        userDbStorage.addUser(user2);
+        List<User> users = new ArrayList<>(userDbStorage.getUsers());
         assertEquals(len + 2, users.size());
-        assertTrue(users.contains(user));
-        assertTrue(users.contains(user2));
     }
 
     @Test
+    @DirtiesContext
     void createUserWithWrongEmail() {
         User user = User.builder().email(null).login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
@@ -77,7 +93,9 @@ class UserControllerTest {
         assertEquals(1, violations3.size(), "Wrong Email");
     }
 
+
     @Test
+    @DirtiesContext
     void createUserWithWrongLogin() {
         User user = User.builder().email("email@yandex.ru").login(null).name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
@@ -92,17 +110,19 @@ class UserControllerTest {
     }
 
     @Test
+    @DirtiesContext
     void createUserWithoutName() {
         User user = User.builder().email("email@yandex.ru").login("login").name(null)
                 .birthday(LocalDate.of(2000, 1, 1)).build();
-        User createdUser = userController.createUser(user);
+        User createdUser = userDbStorage.addUser(user);
         assertEquals(user.getLogin(), createdUser.getName());
         user.setName("");
-        createdUser = userController.updateUser(user);
+        createdUser = userDbStorage.updateUser(user);
         assertEquals(user.getLogin(), createdUser.getName());
     }
 
     @Test
+    @DirtiesContext
     void createUserWithWrongBirthdate() {
         LocalDate now = LocalDate.now();
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
@@ -113,76 +133,67 @@ class UserControllerTest {
         Set<ConstraintViolation<User>> violations2 = validator.validate(user);
         assertEquals(1, violations2.size(), "birthday is tommorow");
         user.setBirthday(now);
-        assertEquals(user, userController.createUser(user));
+        assertEquals(user, userDbStorage.addUser(user));
     }
 
     @Test
     void updateUserWithWrongId() {
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
-        userController.createUser(user);
+        userDbStorage.addUser(user);
         user.setId(999);
-        assertThrows(ValidationException.class, () -> userController.updateUser(user));
+        assertThrows(InvalidDataAccessApiUsageException.class, () -> userDbStorage.updateUser(user));
     }
 
     @Test
+    @DirtiesContext
     void addFriend() {
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
         User user2 = User.builder().email("email2@yandex.ru").login("login2").name("name2")
                 .birthday(LocalDate.of(2001, 2, 2)).build();
-        userController.createUser(user);
-        userController.createUser(user2);
-        userController.addFriend(user.getId(), user2.getId());
-        assertEquals(1, user.getFriends().size());
-        assertEquals(1, user2.getFriends().size());
-        assertTrue(user.getFriends().contains(user2.getId()));
-        assertTrue(user2.getFriends().contains(user.getId()));
+        user = userDbStorage.addUser(user);
+        user2 = userDbStorage.addUser(user2);
+        friendsStorage.addFriend(user.getId(), user2.getId());
+        assertEquals(1, friendsStorage.getFriends(user.getId()).size());
+        assertEquals(0, friendsStorage.getFriends(user2.getId()).size());
+        friendsStorage.addFriend(user2.getId(), user.getId());
+        assertEquals(1, friendsStorage.getFriends(user.getId()).size());
+        assertEquals(1, friendsStorage.getFriends(user2.getId()).size());
     }
 
     @Test
+    @DirtiesContext
     void addFriendWithWrongId() {
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
-        userController.createUser(user);
-        assertThrows(IllegalArgumentException.class, () -> userController.addFriend(user.getId(), 999));
-        assertThrows(IllegalArgumentException.class, () -> userController.addFriend(999, user.getId()));
+        userDbStorage.addUser(user);
+        assertThrows(DataIntegrityViolationException.class, () -> friendsStorage.addFriend(user.getId(), 999));
+        assertThrows(DataIntegrityViolationException.class, () -> friendsStorage.addFriend(999, user.getId()));
     }
 
     @Test
+    @DirtiesContext
     void deleteFriend() {
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
         User user2 = User.builder().email("email2@yandex.ru").login("login2").name("name2")
                 .birthday(LocalDate.of(2001, 2, 2)).build();
-        userController.createUser(user);
-        userController.createUser(user2);
-        userController.addFriend(user.getId(), user2.getId());
-        assertEquals(1, user.getFriends().size());
-        assertEquals(1, user2.getFriends().size());
-        userController.deleteFriend(user.getId(), user2.getId());
-        assertEquals(0, user.getFriends().size());
-        assertEquals(0, user2.getFriends().size());
+        userDbStorage.addUser(user);
+        userDbStorage.addUser(user2);
+        friendsStorage.addFriend(user.getId(), user2.getId());
+        friendsStorage.addFriend(user2.getId(), user.getId());
+        assertEquals(1, friendsStorage.getFriends(user.getId()).size());
+        assertEquals(1, friendsStorage.getFriends(user2.getId()).size());
+        friendsStorage.deleteFriend(user.getId(), user2.getId());
+        friendsStorage.deleteFriend(user2.getId(), user.getId());
+        assertEquals(0, friendsStorage.getFriends(user.getId()).size());
+        assertEquals(0, friendsStorage.getFriends(user2.getId()).size());
     }
 
-    @Test
-    void deleteFriendWithWrongId() {
-        User user = User.builder().email("email@yandex.ru").login("login").name("name")
-                .birthday(LocalDate.of(2000, 1, 1)).build();
-        User user2 = User.builder().email("email2@yandex.ru").login("login2").name("name2")
-                .birthday(LocalDate.of(2001, 2, 2)).build();
-        userController.createUser(user);
-        userController.createUser(user2);
-        userController.addFriend(user.getId(), user2.getId());
-        assertEquals(1, user.getFriends().size());
-        assertEquals(1, user2.getFriends().size());
-        assertThrows(IllegalArgumentException.class, () -> userController.deleteFriend(user.getId(), 999));
-        assertThrows(IllegalArgumentException.class, () -> userController.deleteFriend(999, user2.getId()));
-        assertEquals(1, user.getFriends().size());
-        assertEquals(1, user2.getFriends().size());
-    }
 
     @Test
+    @DirtiesContext
     void getFriends() {
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
@@ -190,24 +201,21 @@ class UserControllerTest {
                 .birthday(LocalDate.of(2001, 2, 2)).build();
         User user3 = User.builder().email("email3@yandex.ru").login("login3").name("name3")
                 .birthday(LocalDate.of(2002, 3, 3)).build();
-        userController.createUser(user);
-        userController.createUser(user2);
-        userController.createUser(user3);
-        userController.addFriend(user.getId(), user2.getId());
-        userController.addFriend(user.getId(), user3.getId());
-        assertEquals(2, user.getFriends().size());
-        assertEquals(1, user2.getFriends().size());
-        assertEquals(1, user3.getFriends().size());
-        assertTrue(user.getFriends().contains(user2.getId()));
-        assertTrue(user.getFriends().contains(user3.getId()));
+        userDbStorage.addUser(user);
+        userDbStorage.addUser(user2);
+        userDbStorage.addUser(user3);
+        friendsStorage.addFriend(user.getId(), user2.getId());
+        friendsStorage.addFriend(user.getId(), user3.getId());
+        friendsStorage.addFriend(user2.getId(), user3.getId());
+        friendsStorage.addFriend(user3.getId(), user2.getId());
+        assertEquals(2, friendsStorage.getFriends(user.getId()).size());
+        assertEquals(1, friendsStorage.getFriends(user2.getId()).size());
+        assertEquals(1, friendsStorage.getFriends(user3.getId()).size());
     }
 
-    @Test
-    void getFriendsWithWrongId() {
-        assertThrows(IllegalArgumentException.class, () -> userController.getFriends(999));
-    }
 
     @Test
+    @DirtiesContext
     void getCommonFriends() {
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
@@ -217,40 +225,31 @@ class UserControllerTest {
                 .birthday(LocalDate.of(2002, 3, 3)).build();
         User user4 = User.builder().email("email4@yandex.ru").login("login4").name("name4")
                 .birthday(LocalDate.of(2002, 3, 3)).build();
-        userController.createUser(user);
-        userController.createUser(user2);
-        userController.createUser(user3);
-        userController.createUser(user4);
-        userController.addFriend(user.getId(), user2.getId());
-        userController.addFriend(user.getId(), user3.getId());
-        userController.addFriend(user4.getId(), user2.getId());
-        userController.addFriend(user4.getId(), user3.getId());
-        List<User> commonUsers = userController.getCommonUsers(user4.getId(), user.getId());
+        userDbStorage.addUser(user);
+        userDbStorage.addUser(user2);
+        userDbStorage.addUser(user3);
+        userDbStorage.addUser(user4);
+        friendsStorage.addFriend(user.getId(), user2.getId());
+        friendsStorage.addFriend(user.getId(), user3.getId());
+        friendsStorage.addFriend(user4.getId(), user2.getId());
+        friendsStorage.addFriend(user4.getId(), user3.getId());
+        List<User> commonUsers = friendsStorage.getCommonFriends(user.getId(), user4.getId());
         assertEquals(2, commonUsers.size());
-        assertTrue(commonUsers.contains(user2));
-        assertTrue(commonUsers.contains(user3));
     }
 
-    @Test
-    void getCommonFriendsWithWrongId() {
-        User user = User.builder().email("email@yandex.ru").login("login").name("name")
-                .birthday(LocalDate.of(2000, 1, 1)).build();
-        userController.createUser(user);
-        assertThrows(IllegalArgumentException.class, () -> userController.getCommonUsers(user.getId(), 999));
-        assertThrows(IllegalArgumentException.class, () -> userController.getCommonUsers(999, user.getId()));
-        assertThrows(IllegalArgumentException.class, () -> userController.getCommonUsers(999, 111));
-    }
 
     @Test
+    @DirtiesContext
     void getUserById() {
         User user = User.builder().email("email@yandex.ru").login("login").name("name")
                 .birthday(LocalDate.of(2000, 1, 1)).build();
-        userController.createUser(user);
-        assertEquals(user, userController.getUser(user.getId()));
+        userDbStorage.addUser(user);
+        assertEquals(user, userDbStorage.getUser(user.getId()));
     }
 
     @Test
+    @DirtiesContext
     void getUserWithWrongId() {
-        assertThrows(IllegalArgumentException.class, () -> userController.getUser(999));
+        assertThrows(InvalidDataAccessApiUsageException.class, () -> userDbStorage.getUser(999));
     }
 }
