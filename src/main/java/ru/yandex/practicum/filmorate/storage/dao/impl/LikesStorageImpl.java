@@ -23,7 +23,7 @@ public class LikesStorageImpl implements LikesStorage {
     }
 
     public void addLike(int filmId, int userId) {
-        if (!checkIds(userId, filmId)) throw new IllegalArgumentException("WRONG ID");
+        if (!(checkFilmId(filmId) & checkUserId(userId))) throw new IllegalArgumentException("WRONG ID");
         jdbcTemplate.update("INSERT INTO LIKES (FILM_ID, USER_ID) VALUES (?, ?)", filmId, userId);
     }
 
@@ -36,8 +36,8 @@ public class LikesStorageImpl implements LikesStorage {
 
     public List<Film> getTopFilms(int count) {
         String sql = ("SELECT F.FILM_ID, NAME, DESCRIPTION, RELEASE_DATE, DURATION, MPA_ID, " +
-                "COUNT(USER_ID) FROM FILMS F LEFT JOIN LIKES L on F.FILM_ID = L.FILM_ID\n" +
-                "GROUP BY F.FILM_ID ORDER BY COUNT(USER_ID) DESC LIMIT " + count);
+                "COUNT(USER_ID) AS COUNT FROM FILMS F LEFT JOIN LIKES L on F.FILM_ID = L.FILM_ID\n" +
+                "GROUP BY F.FILM_ID ORDER BY COUNT DESC LIMIT " + count);
         return jdbcTemplate.query(sql, (rs, rowNum) -> {
             Film f = new Film();
             f.setId(rs.getInt("FILM_ID"));
@@ -47,15 +47,30 @@ public class LikesStorageImpl implements LikesStorage {
             f.setDuration(rs.getInt("DURATION"));
             f.setMpa(mpaStorage.getMpaById(rs.getInt("MPA_ID")));
             f.setGenres(genresStorage.getGenresByFilmId(f.getId()));
+            f.setRating(rs.getInt("COUNT"));
             return f;
         });
     }
 
-    private boolean checkIds(int userId, int filmId) {
+    private boolean checkUserId(int userId) {
         Boolean checkUser = jdbcTemplate.queryForObject("SELECT EXISTS(SELECT * FROM USERS WHERE USER_ID = ?)",
                 Boolean.class, userId);
+        return Boolean.TRUE.equals(checkUser);
+    }
+
+    private boolean checkFilmId(int filmId) {
         Boolean checkFilm = jdbcTemplate.queryForObject("SELECT EXISTS(SELECT * FROM FILMS WHERE FILM_ID = ?)",
                 Boolean.class, filmId);
-        return Boolean.TRUE.equals(checkUser) & Boolean.TRUE.equals(checkFilm);
+        return Boolean.TRUE.equals(checkFilm);
+    }
+
+    public Integer countOfLikes(int filmId) {
+        if (!checkFilmId(filmId)) throw new IllegalArgumentException("WRONG ID");
+        Integer countOfLikes = jdbcTemplate.queryForObject("SELECT COUNT(USER_ID) AS COUNT " +
+                "FROM LIKES WHERE FILM_ID = ?", Integer.class, filmId);
+        if (countOfLikes == null) {
+            return 0;
+        }
+        return countOfLikes;
     }
 }

@@ -11,4 +11,6 @@ public interface LikesStorage {
     void deleteLike(int filmId, int userId);
 
     List<Film> getTopFilms(int count);
+
+    Integer countOfLikes(int filmId);
 }

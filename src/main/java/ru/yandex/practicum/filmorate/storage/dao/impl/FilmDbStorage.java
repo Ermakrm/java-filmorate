@@ -9,6 +9,7 @@ import ru.yandex.practicum.filmorate.model.Film;
 import ru.yandex.practicum.filmorate.model.Genres;
 import ru.yandex.practicum.filmorate.storage.dao.FilmStorage;
 import ru.yandex.practicum.filmorate.storage.dao.GenresStorage;
+import ru.yandex.practicum.filmorate.storage.dao.LikesStorage;
 import ru.yandex.practicum.filmorate.storage.dao.MpaStorage;
 
 import javax.sql.DataSource;
@@ -22,14 +23,16 @@ public class FilmDbStorage implements FilmStorage {
     private final SimpleJdbcInsert insertFilm;
     private final MpaStorage mpaStorage;
     private final GenresStorage genresStorage;
+    private final LikesStorage likesStorage;
 
     public FilmDbStorage(JdbcTemplate jdbcTemplate, DataSource dataSource,
-                         MpaStorage mpaStorage, GenresStorage genresStorage) {
+                         MpaStorage mpaStorage, GenresStorage genresStorage, LikesStorage likesStorage) {
         this.insertFilm = new SimpleJdbcInsert(dataSource).withTableName("FILMS")
                 .usingGeneratedKeyColumns("FILM_ID");
         this.jdbcTemplate = jdbcTemplate;
         this.mpaStorage = mpaStorage;
         this.genresStorage = genresStorage;
+        this.likesStorage = likesStorage;
     }
 
     @Override
@@ -67,6 +70,7 @@ public class FilmDbStorage implements FilmStorage {
         parameters.put("MPA_ID", film.getMpa().getId());
         Number newId = insertFilm.executeAndReturnKey(parameters);
         film.setId(newId.intValue());
+        film.setRating(0);
         if (film.getGenres() != null) {
             Set<Genres> genres = new LinkedHashSet<>(film.getGenres());
             film.getGenres().clear();
@@ -106,6 +110,7 @@ public class FilmDbStorage implements FilmStorage {
                 genresStorage.addFilmGenre(film.getId(), g.getId());
             }
         }
+        film.setRating(likesStorage.countOfLikes(film.getId()));
         if (status != 1) {
             throw new IllegalArgumentException("WRONG ID");
         }
@@ -124,6 +129,7 @@ public class FilmDbStorage implements FilmStorage {
             f.setDuration(filmRows.getInt("DURATION"));
             f.setMpa(mpaStorage.getMpaById(filmRows.getInt("MPA_ID")));
             f.setGenres(genresStorage.getGenresByFilmId(f.getId()));
+            f.setRating(likesStorage.countOfLikes(f.getId()));
             return f;
         } else {
             throw new IllegalArgumentException("WRONG ID");
