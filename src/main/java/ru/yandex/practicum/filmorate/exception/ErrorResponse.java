@@ -13,7 +13,7 @@ import java.util.Map;
 
 @RestControllerAdvice
 class ErrorResponse {
-    @ExceptionHandler({IllegalArgumentException.class, SQLException.class})
+    @ExceptionHandler({IllegalArgumentException.class, SQLException.class, DataIntegrityViolationException.class})
     @ResponseStatus(HttpStatus.NOT_FOUND)
     public Map<String, String> handleWrongArgument(final RuntimeException e) {
         return Map.of("Wrong argument", e.getMessage());
@@ -23,11 +23,5 @@ class ErrorResponse {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleValidate(final RuntimeException e) {
         return Map.of("Validation error", e.getMessage());
-    }
-
-    @ExceptionHandler({DataIntegrityViolationException.class})
-    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
-    public Map<String, String> inernalServerError(final RuntimeException e) {
-        return Map.of("Wrong argument", e.getMessage());
     }
 }
