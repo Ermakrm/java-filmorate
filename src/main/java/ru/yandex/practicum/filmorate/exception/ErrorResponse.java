@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.exception;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.ResponseStatus;
@@ -22,5 +23,11 @@ class ErrorResponse {
     @ResponseStatus(HttpStatus.BAD_REQUEST)
     public Map<String, String> handleValidate(final RuntimeException e) {
         return Map.of("Validation error", e.getMessage());
+    }
+
+    @ExceptionHandler({DataIntegrityViolationException.class})
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    public Map<String, String> inernalServerError(final RuntimeException e) {
+        return Map.of("Wrong argument", e.getMessage());
     }
 }
