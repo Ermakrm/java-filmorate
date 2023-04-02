@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.dao.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.MPA;
@@ -11,6 +12,12 @@ import java.util.List;
 @Repository
 public class MpaStorageImpl implements MpaStorage {
     private final JdbcTemplate jdbcTemplate;
+    private final RowMapper<MPA> mpaRowMapper = (rs, rowNum) -> {
+        MPA mpa = new MPA();
+        mpa.setId(rs.getInt("MPA_ID"));
+        mpa.setName(rs.getString("NAME"));
+        return mpa;
+    };
 
     public MpaStorageImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
@@ -18,12 +25,7 @@ public class MpaStorageImpl implements MpaStorage {
 
     @Override
     public List<MPA> getMPAs() {
-        return jdbcTemplate.query("SELECT * FROM MPA", (rs, rowNum) -> {
-            MPA m = new MPA();
-            m.setId(rs.getInt("MPA_ID"));
-            m.setName(rs.getString("NAME"));
-            return m;
-        });
+        return jdbcTemplate.query("SELECT * FROM MPA", mpaRowMapper);
     }
 
     @Override

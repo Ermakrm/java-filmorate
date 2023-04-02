@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.dao.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.User;
 import ru.yandex.practicum.filmorate.storage.dao.FriendsStorage;
@@ -19,18 +20,20 @@ public class FriendsStorageImpl implements FriendsStorage {
         this.jdbcTemplate = jdbcTemplate;
     }
 
+    private final RowMapper<User> friendsRowMapper = (rs, rowNum) -> {
+        User u = new User();
+        u.setId(rs.getInt("FRIEND_ID"));
+        u.setLogin(rs.getString("LOGIN"));
+        u.setName(rs.getString("NAME"));
+        u.setEmail(rs.getString("EMAIL"));
+        u.setBirthday(LocalDate.parse(rs.getString("BIRTHDAY")));
+        return u;
+    };
+
     @Override
     public List<User> getFriends(int id) {
         String sql = "SELECT * FROM FRIENDS AS F JOIN USERS U on F.FRIEND_ID = U.USER_ID WHERE F.USER_ID = " + id;
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
-            User u = new User();
-            u.setId(rs.getInt("FRIEND_ID"));
-            u.setLogin(rs.getString("LOGIN"));
-            u.setName(rs.getString("NAME"));
-            u.setEmail(rs.getString("EMAIL"));
-            u.setBirthday(LocalDate.parse(rs.getString("BIRTHDAY")));
-            return u;
-        });
+        return jdbcTemplate.query(sql, friendsRowMapper);
     }
 
     @Override

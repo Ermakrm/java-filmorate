@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.dao.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Repository;
@@ -19,6 +20,16 @@ public class UserDbStorage implements UserStorage {
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert insertUser;
 
+    private final RowMapper<User> userRowMapper = (rs, rowNum) -> {
+        User u = new User();
+        u.setId(rs.getInt("USER_ID"));
+        u.setLogin(rs.getString("LOGIN"));
+        u.setName(rs.getString("NAME"));
+        u.setEmail(rs.getString("EMAIL"));
+        u.setBirthday(LocalDate.parse(rs.getString("BIRTHDAY")));
+        return u;
+    };
+
     public UserDbStorage(JdbcTemplate jdbcTemplate, DataSource dataSource) {
         this.insertUser = new SimpleJdbcInsert(dataSource).withTableName("USERS")
                 .usingGeneratedKeyColumns("USER_ID");
@@ -27,15 +38,7 @@ public class UserDbStorage implements UserStorage {
 
     @Override
     public Collection<User> getUsers() {
-        return jdbcTemplate.query("SELECT * FROM USERS", (rs, rowNum) -> {
-            User u = new User();
-            u.setId(rs.getInt("USER_ID"));
-            u.setLogin(rs.getString("LOGIN"));
-            u.setName(rs.getString("NAME"));
-            u.setEmail(rs.getString("EMAIL"));
-            u.setBirthday(LocalDate.parse(rs.getString("BIRTHDAY")));
-            return u;
-        });
+        return jdbcTemplate.query("SELECT * FROM USERS", userRowMapper);
     }
 
     @Override

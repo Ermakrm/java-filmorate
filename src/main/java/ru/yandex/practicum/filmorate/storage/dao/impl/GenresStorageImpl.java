@@ -1,6 +1,7 @@
 package ru.yandex.practicum.filmorate.storage.dao.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.Genres;
@@ -12,18 +13,20 @@ import java.util.List;
 public class GenresStorageImpl implements GenresStorage {
     private final JdbcTemplate jdbcTemplate;
 
+    private final RowMapper<Genres> genresRowMapper = (rs, rowNum) -> {
+        Genres genre = new Genres();
+        genre.setId(rs.getInt("GENRE_ID"));
+        genre.setName(rs.getString("NAME"));
+        return genre;
+    };
+
     public GenresStorageImpl(JdbcTemplate jdbcTemplate) {
         this.jdbcTemplate = jdbcTemplate;
     }
 
     @Override
     public List<Genres> getGenres() {
-        return jdbcTemplate.query("SELECT * FROM GENRES", (rs, rowNum) -> {
-            Genres g = new Genres();
-            g.setId(rs.getInt("GENRE_ID"));
-            g.setName(rs.getString("NAME"));
-            return g;
-        });
+        return jdbcTemplate.query("SELECT * FROM GENRES", genresRowMapper);
     }
 
     @Override
@@ -43,12 +46,7 @@ public class GenresStorageImpl implements GenresStorage {
     public List<Genres> getGenresByFilmId(int id) {
         String sql = "SELECT * FROM GENRES LEFT JOIN FILM_GENRES FG on GENRES.GENRE_ID = FG.GENRE_ID " +
                 "WHERE FILM_ID = " + id;
-        return jdbcTemplate.query(sql, (rs, rowNum) -> {
-            Genres g = new Genres();
-            g.setId(rs.getInt("GENRE_ID"));
-            g.setName(rs.getString("NAME"));
-            return g;
-        });
+        return jdbcTemplate.query(sql, genresRowMapper);
     }
 
     @Override
