@@ -1,5 +1,6 @@
 package ru.yandex.practicum.filmorate.storage.dao.impl;
 
+import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
 import org.springframework.stereotype.Repository;
@@ -38,7 +39,7 @@ public class FriendsStorageImpl implements FriendsStorage {
 
     @Override
     public void addFriend(int id1, int id2) {
-        if (!(checkUserId(id1) & checkUserId(id2))) throw new IllegalArgumentException("WRONG ID");
+        if (!(checkUserId(id1) & checkUserId(id2))) throw new DataIntegrityViolationException("WRONG ID");
         jdbcTemplate.update("INSERT INTO FRIENDS (USER_ID, FRIEND_ID) VALUES (?, ?)", id1, id2);
     }
 
