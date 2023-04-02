@@ -49,6 +49,16 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film addFilm(Film film) {
+        if (film.getMpa().getId() == 0) throw new IllegalArgumentException("EMPTY MPA_ID");
+        if (film.getGenres() != null) {
+            for (Genres genre : film.getGenres()) {
+                if (genre.getId() == 0) throw new IllegalArgumentException("EMPTY GENRE_ID");
+            }
+        }
+        Boolean check = jdbcTemplate.queryForObject("SELECT EXISTS(SELECT * FROM FILMS WHERE NAME = ? " +
+                        "AND DESCRIPTION = ? AND RELEASE_DATE = ? AND DURATION = ?)",
+                Boolean.class, film.getName(), film.getDescription(), film.getReleaseDate(), film.getDuration());
+        if (Boolean.TRUE.equals(check)) throw new IllegalArgumentException("FILM ALREADY EXIST");
         Map<String, Object> parameters = new HashMap<>(5);
         parameters.put("NAME", film.getName());
         parameters.put("DESCRIPTION", film.getDescription());
@@ -76,6 +86,13 @@ public class FilmDbStorage implements FilmStorage {
 
     @Override
     public Film updateFilm(Film film) {
+        if (film.getId() == null) throw new IllegalArgumentException("EMPTY FILM_ID");
+        if (film.getMpa().getId() == 0) throw new IllegalArgumentException("EMPTY MPA_ID");
+        if (film.getGenres() != null) {
+            for (Genres genre : film.getGenres()) {
+                if (genre.getId() == 0) throw new IllegalArgumentException("EMPTY GENRE_ID");
+            }
+        }
         int status = jdbcTemplate.update("UPDATE FILMS SET NAME = ?, DESCRIPTION = ?, RELEASE_DATE = ?, " +
                         "DURATION = ?, MPA_ID = ? " +
                         "WHERE FILM_ID = ?", film.getName(), film.getDescription(), film.getReleaseDate(),

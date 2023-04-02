@@ -23,6 +23,7 @@ public class LikesStorageImpl implements LikesStorage {
     }
 
     public void addLike(int filmId, int userId) {
+        if (!checkIds(userId, filmId)) throw new IllegalArgumentException("WRONG ID");
         jdbcTemplate.update("INSERT INTO LIKES (FILM_ID, USER_ID) VALUES (?, ?)", filmId, userId);
     }
 
@@ -50,4 +51,11 @@ public class LikesStorageImpl implements LikesStorage {
         });
     }
 
+    private boolean checkIds(int userId, int filmId) {
+        Boolean checkUser = jdbcTemplate.queryForObject("SELECT EXISTS(SELECT * FROM USERS WHERE USER_ID = ?)",
+                Boolean.class, userId);
+        Boolean checkFilm = jdbcTemplate.queryForObject("SELECT EXISTS(SELECT * FROM FILMS WHERE FILM_ID = ?)",
+                Boolean.class, filmId);
+        return Boolean.TRUE.equals(checkUser) & Boolean.TRUE.equals(checkFilm);
+    }
 }

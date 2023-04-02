@@ -4,8 +4,8 @@ import lombok.*;
 
 import javax.validation.constraints.*;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
+import java.util.ArrayList;
+import java.util.List;
 
 @Setter
 @Getter
@@ -28,5 +28,5 @@ public class User {
     @NotNull
     private LocalDate birthday;
     @Builder.Default
-    Set<Integer> friends = new HashSet<>();
+    List<User> friends = new ArrayList<>();
 }

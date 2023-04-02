@@ -1,11 +1,11 @@
 package ru.yandex.practicum.filmorate.storage.dao.impl;
 
 import org.springframework.jdbc.core.JdbcTemplate;
-import org.springframework.jdbc.core.RowMapper;
 import org.springframework.jdbc.core.simple.SimpleJdbcInsert;
 import org.springframework.jdbc.support.rowset.SqlRowSet;
 import org.springframework.stereotype.Repository;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.dao.FriendsStorage;
 import ru.yandex.practicum.filmorate.storage.dao.UserStorage;
 
 import javax.sql.DataSource;
@@ -19,26 +19,27 @@ import java.util.Objects;
 public class UserDbStorage implements UserStorage {
     private final JdbcTemplate jdbcTemplate;
     private final SimpleJdbcInsert insertUser;
+    private final FriendsStorage friendsStorage;
 
-    private final RowMapper<User> userRowMapper = (rs, rowNum) -> {
-        User u = new User();
-        u.setId(rs.getInt("USER_ID"));
-        u.setLogin(rs.getString("LOGIN"));
-        u.setName(rs.getString("NAME"));
-        u.setEmail(rs.getString("EMAIL"));
-        u.setBirthday(LocalDate.parse(rs.getString("BIRTHDAY")));
-        return u;
-    };
-
-    public UserDbStorage(JdbcTemplate jdbcTemplate, DataSource dataSource) {
+    public UserDbStorage(JdbcTemplate jdbcTemplate, DataSource dataSource, FriendsStorage friendsStorage) {
         this.insertUser = new SimpleJdbcInsert(dataSource).withTableName("USERS")
                 .usingGeneratedKeyColumns("USER_ID");
         this.jdbcTemplate = jdbcTemplate;
+        this.friendsStorage = friendsStorage;
     }
 
     @Override
     public Collection<User> getUsers() {
-        return jdbcTemplate.query("SELECT * FROM USERS", userRowMapper);
+        return jdbcTemplate.query("SELECT * FROM USERS", (rs, rowNum) -> {
+            User u = new User();
+            u.setId(rs.getInt("USER_ID"));
+            u.setLogin(rs.getString("LOGIN"));
+            u.setName(rs.getString("NAME"));
+            u.setEmail(rs.getString("EMAIL"));
+            u.setBirthday(LocalDate.parse(rs.getString("BIRTHDAY")));
+            u.setFriends(friendsStorage.getFriends(u.getId()));
+            return u;
+        });
     }
 
     @Override
@@ -53,6 +54,7 @@ public class UserDbStorage implements UserStorage {
         parameters.put("BIRTHDAY", user.getBirthday());
         Number newId = insertUser.executeAndReturnKey(parameters);
         user.setId(newId.intValue());
+        user.setFriends(friendsStorage.getFriends(user.getId()));
         return user;
     }
 
@@ -64,6 +66,7 @@ public class UserDbStorage implements UserStorage {
         int status = jdbcTemplate.update("UPDATE USERS SET EMAIL = ?, LOGIN = ?, NAME = ?, BIRTHDAY = ? " +
                         "WHERE USER_ID = ?",
                 user.getEmail(), user.getLogin(), user.getName(), user.getBirthday(), user.getId());
+        user.setFriends(friendsStorage.getFriends(user.getId()));
         if (status != 1) {
             throw new IllegalArgumentException("WRONG ID");
         }
@@ -86,6 +89,7 @@ public class UserDbStorage implements UserStorage {
             u.setName(userRows.getString("NAME"));
             u.setEmail(userRows.getString("EMAIL"));
             u.setBirthday(Objects.requireNonNull(userRows.getDate("BIRTHDAY")).toLocalDate());
+            u.setFriends(friendsStorage.getFriends(u.getId()));
             return u;
         } else {
             throw new IllegalArgumentException("WRONG ID");

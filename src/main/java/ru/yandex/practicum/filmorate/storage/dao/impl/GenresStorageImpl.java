@@ -44,6 +44,7 @@ public class GenresStorageImpl implements GenresStorage {
 
     @Override
     public List<Genres> getGenresByFilmId(int id) {
+        if (!checkFilmId(id)) throw new IllegalArgumentException("WRONG ID");
         String sql = "SELECT * FROM GENRES LEFT JOIN FILM_GENRES FG on GENRES.GENRE_ID = FG.GENRE_ID " +
                 "WHERE FILM_ID = " + id;
         return jdbcTemplate.query(sql, genresRowMapper);
@@ -51,6 +52,8 @@ public class GenresStorageImpl implements GenresStorage {
 
     @Override
     public void addFilmGenre(int filmId, int genreId) {
+        if (filmId == 0 || genreId == 0) throw new IllegalArgumentException("EMPTY ID");
+        if (!(checkGenreId(genreId) & checkFilmId(filmId))) throw new IllegalArgumentException("WRONG ID");
         int status = jdbcTemplate.update("INSERT INTO FILM_GENRES (FILM_ID, GENRE_ID) " +
                 "VALUES ( ?, ? )", filmId, genreId);
         if (status != 1) throw new IllegalArgumentException("WRONG");
@@ -59,5 +62,17 @@ public class GenresStorageImpl implements GenresStorage {
     @Override
     public void deleteFilmGenres(int filmId) {
         jdbcTemplate.update("DELETE FROM FILM_GENRES WHERE FILM_ID = ?", filmId);
+    }
+
+    private boolean checkFilmId(int filmId) {
+        Boolean checkFilm = jdbcTemplate.queryForObject("SELECT EXISTS(SELECT * FROM FILMS WHERE FILM_ID = ?)",
+                Boolean.class, filmId);
+        return Boolean.TRUE.equals(checkFilm);
+    }
+
+    private boolean checkGenreId(int genreId) {
+        Boolean checkGenre = jdbcTemplate.queryForObject("SELECT EXISTS(SELECT * FROM GENRES WHERE GENRE_ID = ?)",
+                Boolean.class, genreId);
+        return Boolean.TRUE.equals(checkGenre);
     }
 }

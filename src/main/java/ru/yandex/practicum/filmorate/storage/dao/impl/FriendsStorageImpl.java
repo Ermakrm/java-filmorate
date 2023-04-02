@@ -38,12 +38,13 @@ public class FriendsStorageImpl implements FriendsStorage {
 
     @Override
     public void addFriend(int id1, int id2) {
-        int status = jdbcTemplate.update("INSERT INTO FRIENDS (USER_ID, FRIEND_ID) VALUES (?, ?)", id1, id2);
-        if (status != 1) throw new IllegalArgumentException("WRONG ID");
+        if (!(checkUserId(id1) & checkUserId(id2))) throw new IllegalArgumentException("WRONG ID");
+        jdbcTemplate.update("INSERT INTO FRIENDS (USER_ID, FRIEND_ID) VALUES (?, ?)", id1, id2);
     }
 
     @Override
     public void deleteFriend(int id1, int id2) {
+        if (!(checkUserId(id1) & checkUserId(id2))) throw new IllegalArgumentException("WRONG ID");
         jdbcTemplate.update("DELETE FROM FRIENDS WHERE USER_ID = ? AND FRIEND_ID = ?", id1, id2);
     }
 
@@ -52,5 +53,11 @@ public class FriendsStorageImpl implements FriendsStorage {
         Set<User> common = new HashSet<>(getFriends(id1));
         common.retainAll(getFriends(id2));
         return new ArrayList<>(common);
+    }
+
+    private boolean checkUserId(int userId) {
+        Boolean checkUser = jdbcTemplate.queryForObject("SELECT EXISTS(SELECT * FROM USERS WHERE USER_ID = ?)",
+                Boolean.class, userId);
+        return Boolean.TRUE.equals(checkUser);
     }
 }
