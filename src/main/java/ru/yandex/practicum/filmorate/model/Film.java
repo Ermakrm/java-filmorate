@@ -8,9 +8,7 @@ import javax.validation.constraints.NotNull;
 import javax.validation.constraints.Positive;
 import javax.validation.constraints.Size;
 import java.time.LocalDate;
-import java.util.HashSet;
-import java.util.Set;
-
+import java.util.List;
 
 @Builder
 @Setter
@@ -18,6 +16,7 @@ import java.util.Set;
 @EqualsAndHashCode
 @ToString
 @AllArgsConstructor
+@NoArgsConstructor
 public class Film {
 
     private Integer id;
@@ -32,6 +31,7 @@ public class Film {
     @Positive
     @NotNull
     private Integer duration;
-    @Builder.Default
-    Set<Integer> likes = new HashSet<>();
+    private Integer rating;
+    private MPA mpa;
+    private List<Genres> genres;
 }

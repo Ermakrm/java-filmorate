@@ -3,11 +3,12 @@ package ru.yandex.practicum.filmorate.storage.user;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 import ru.yandex.practicum.filmorate.model.User;
+import ru.yandex.practicum.filmorate.storage.dao.UserStorage;
 
 import javax.validation.ValidationException;
+import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.Map;
 
 @Slf4j
@@ -17,7 +18,7 @@ public class InMemoryUserStorage implements UserStorage {
     private final Map<Integer, User> users = new HashMap<>();
     private static Integer generatorUserId = 0;
 
-    public Collection<User> getUsersList() {
+    public Collection<User> getUsers() {
         return users.values();
     }
 
@@ -25,8 +26,10 @@ public class InMemoryUserStorage implements UserStorage {
         return ++generatorUserId;
     }
 
-    public Map<Integer, User> getUsers() {
-        return users;
+
+    @Override
+    public User getUser(int id) {
+        return users.get(id);
     }
 
     @Override
@@ -36,7 +39,7 @@ public class InMemoryUserStorage implements UserStorage {
             user.setName(user.getLogin());
         }
         if (user.getFriends() == null) {
-            user.setFriends(new HashSet<>());
+            user.setFriends(new ArrayList<>());
         }
         users.put(user.getId(), user);
         log.debug("User added {}", user);
@@ -49,7 +52,7 @@ public class InMemoryUserStorage implements UserStorage {
             throw new ValidationException("Ошибка обновления! Такого пользователя не существует");
         }
         if (user.getFriends() == null) {
-            user.setFriends(new HashSet<>());
+            user.setFriends(new ArrayList<>());
         }
         if (user.getName().isBlank() || user.getName() == null) {
             user.setName(user.getLogin());

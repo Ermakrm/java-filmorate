@@ -4,7 +4,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.web.bind.annotation.*;
 import ru.yandex.practicum.filmorate.model.Film;
+import ru.yandex.practicum.filmorate.model.Genres;
+import ru.yandex.practicum.filmorate.model.MPA;
 import ru.yandex.practicum.filmorate.service.FilmService;
+import ru.yandex.practicum.filmorate.storage.dao.GenresStorage;
+import ru.yandex.practicum.filmorate.storage.dao.MpaStorage;
 
 import javax.validation.Valid;
 import java.util.Collection;
@@ -14,9 +18,13 @@ import java.util.List;
 @RestController
 public class FilmController {
     private final FilmService filmService;
+    MpaStorage mpaStorage;
+    GenresStorage genresStorage;
 
     @Autowired
-    public FilmController(FilmService filmService) {
+    public FilmController(FilmService filmService, MpaStorage mpaStorage, GenresStorage genresStorage) {
+        this.genresStorage = genresStorage;
+        this.mpaStorage = mpaStorage;
         this.filmService = filmService;
     }
 
@@ -32,9 +40,29 @@ public class FilmController {
 
     @GetMapping("/films/popular")
     public List<Film> getPopularFilms(@RequestParam(defaultValue = "10") String count) {
-        int c = Integer.parseInt(count);
-        return filmService.getTopFilms(c);
+        return filmService.getTopFilms(Integer.parseInt(count));
     }
+
+    @GetMapping("/mpa")
+    public List<MPA> getMPAs() {
+        return mpaStorage.getMPAs();
+    }
+
+    @GetMapping("/mpa/{id}")
+    public MPA getMpa(@PathVariable int id) {
+        return mpaStorage.getMpaById(id);
+    }
+
+    @GetMapping("/genres")
+    public List<Genres> getGenres() {
+        return genresStorage.getGenres();
+    }
+
+    @GetMapping("/genres/{id}")
+    public Genres getGenre(@PathVariable int id) {
+        return genresStorage.getGenreById(id);
+    }
+
 
     @PostMapping(value = "/films")
     public Film createFilm(@RequestBody @Valid Film film) {
@@ -57,4 +85,6 @@ public class FilmController {
     public void deleteLike(@PathVariable int id, @PathVariable int userId) {
         filmService.deleteLike(id, userId);
     }
+
+
 }

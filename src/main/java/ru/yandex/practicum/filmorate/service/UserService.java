@@ -1,78 +1,59 @@
 package ru.yandex.practicum.filmorate.service;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Qualifier;
 import org.springframework.stereotype.Service;
 import ru.yandex.practicum.filmorate.model.User;
-import ru.yandex.practicum.filmorate.storage.user.InMemoryUserStorage;
+import ru.yandex.practicum.filmorate.storage.dao.FriendsStorage;
+import ru.yandex.practicum.filmorate.storage.dao.UserStorage;
 
-import java.util.*;
+import java.util.Collection;
+import java.util.List;
 
 @Service
 public class UserService {
 
-    InMemoryUserStorage inMemoryUserStorage;
+    UserStorage userStorage;
+    FriendsStorage friendsStorage;
 
     @Autowired
-    public UserService(InMemoryUserStorage inMemoryUserStorage) {
-        this.inMemoryUserStorage = inMemoryUserStorage;
-    }
-
-    public User getUser(int id) {
-        if (!inMemoryUserStorage.getUsers().containsKey(id)) {
-            throw new IllegalArgumentException("Wrong ID");
-        }
-        return inMemoryUserStorage.getUsers().get(id);
-    }
-
-    public User createUser(User user) {
-        return inMemoryUserStorage.addUser(user);
-    }
-
-    public User updateUser(User user) {
-        return inMemoryUserStorage.updateUser(user);
+    public UserService(@Qualifier("userDbStorage") UserStorage userStorage, FriendsStorage friendsStorage) {
+        this.friendsStorage = friendsStorage;
+        this.userStorage = userStorage;
     }
 
     public Collection<User> getAllUsers() {
-        return inMemoryUserStorage.getUsersList();
+        return userStorage.getUsers();
     }
 
-    public void addFriend(int id1, int id2) {
-        getUser(id2).getFriends().add(id1);
-        getUser(id1).getFriends().add(id2);
+    public User createUser(User user) {
+        return userStorage.addUser(user);
+    }
+
+    public User updateUser(User user) {
+        return userStorage.updateUser(user);
+    }
+
+    public User getUser(int id) {
+        if (userStorage.getUser(id) == null) {
+            throw new IllegalArgumentException("WRONG ID");
+        }
+        return userStorage.getUser(id);
     }
 
     public List<User> getFriends(int id) {
-        List<User> friends = new ArrayList<>();
-        if (getUser(id).getFriends().isEmpty()) {
-            return friends;
-        }
-        for (Integer friendId : getUser(id).getFriends()) {
-            friends.add(getUser(friendId));
-        }
-        return friends;
+        return friendsStorage.getFriends(id);
+    }
+
+    public void addFriend(int id1, int id2) {
+        friendsStorage.addFriend(id1, id2);
     }
 
     public void deleteFriend(int id1, int id2) {
-        if (!getUser(id1).getFriends().contains(id2)) {
-            throw new IllegalArgumentException("wrong ID");
-        }
-        getUser(id1).getFriends().remove(id2);
-        getUser(id2).getFriends().remove(id1);
+        friendsStorage.deleteFriend(id1, id2);
     }
 
     public List<User> getCommonFriends(int id1, int id2) {
-        if (getUser(id1).getFriends().isEmpty() && getUser(id2).getFriends().isEmpty()) {
-            return List.of();
-        }
-        Set<Integer> commonIds = new HashSet<>(inMemoryUserStorage.getUsers().get(id1).getFriends());
-        commonIds.retainAll(inMemoryUserStorage.getUsers().get(id2).getFriends());
-        if (commonIds.isEmpty()) {
-            return List.of();
-        }
-        List<User> commonFriends = new ArrayList<>();
-        for (Integer id : commonIds) {
-            commonFriends.add(inMemoryUserStorage.getUsers().get(id));
-        }
-        return commonFriends;
+        return friendsStorage.getCommonFriends(id1, id2);
     }
 }
